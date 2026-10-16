@@ -57,6 +57,7 @@ ax.grid(True, color="#e6e5e0", lw=0.7)
 ax.set_axisbelow(True)
 ax.spines["top"].set_visible(False)
 ax.spines["right"].set_visible(False)
+ax.tick_params(direction="in", length=4)
 ax.legend(frameon=False, fontsize=9.5, loc="upper left")
 
 fig.tight_layout()
