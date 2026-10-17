@@ -1,0 +1,60 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Settings
+U_acc = 5000         # accelerating voltage [V]
+dU_acc = 100         # uncertainty accelerating voltage [V]
+dU_plate = 100       # uncertainty plate voltage [V]
+dy = 0.05            # readout uncertainty y [cm]
+x = np.arange(3, 11) # positions where y is read [cm]
+
+# Measurements: plate voltage [V] and deflection y [cm] at x = 3..10 cm
+data = {
+    "M2": (1900, [-0.01, 0.06, 0.15, 0.25, 0.42, 0.59, 0.78, 0.92]),
+    "M3": (3000, [0.02, 0.12, 0.27, 0.46, 0.70, 0.89, 1.19, 1.45]),
+    "M4": (4600, [0.07, 0.22, 0.45, 0.75, 1.11, 1.54, 2.02, 2.39]),
+    "M5": (3100, [0.02, 0.13, 0.28, 0.48, 0.72, 0.99, 1.31, 1.55]),
+}
+
+colors = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100"]
+markers = ["o", "s", "^", "D"]
+
+fig, axes = plt.subplots(2, 2, figsize=(8, 6.4), dpi=200, sharex=True)
+
+for ax, (name, (U_plate, y)), c, m in zip(axes.flat, data.items(), colors, markers):
+    y = np.array(y)
+
+    # Fit y = k x^2 through the origin, with k = U_plate / (4 d U_acc)
+    k = np.sum(y * x**2) / np.sum(x**4)
+    dk = dy / np.sqrt(np.sum(x**4))
+    d = U_plate / (4 * U_acc * k)
+
+    # Error propagation
+    rel = np.sqrt((dk / k)**2 + (dU_acc / U_acc)**2 + (dU_plate / U_plate)**2)
+    dd = d * rel
+    print(f"{name}: k = {k*1e3:.2f} +/- {dk*1e3:.2f} e-3 1/cm,  d = {d:.2f} +/- {dd:.2f} cm")
+
+    ax.errorbar(x**2, y, yerr=dy, fmt=m, ms=5.5, color=c, mec="white", mew=0.8,
+                elinewidth=0.9, capsize=2, zorder=3, label="data")
+    t = np.linspace(0, 105, 50)
+    ax.plot(t, k * t, color="#1f1f1e", lw=1.5, zorder=2, label=r"fit $y = k\,x^2$")
+
+    ax.set_title(f"{name}, $U_{{plate}}$ = {U_plate} V:  $d$ = ({d:.1f} $\\pm$ {dd:.1f}) cm",
+                 fontsize=10)
+    ax.set_xlim(0, 105)
+    ax.set_ylim(-0.15, 2.6)
+    ax.grid(True, color="#e6e5e0", lw=0.7)
+    ax.set_axisbelow(True)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.tick_params(direction="in", length=4)
+    ax.legend(frameon=False, fontsize=9, loc="upper left")
+
+for ax in axes[1, :]:
+    ax.set_xlabel(r"$x^2$  [cm$^2$]")
+for ax in axes[:, 0]:
+    ax.set_ylabel(r"deflection $y$  [cm]")
+
+fig.tight_layout()
+fig.savefig("A7_each_measurement.png")
+plt.show()
