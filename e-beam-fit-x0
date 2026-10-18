@@ -3,61 +3,82 @@ import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 
 # Settings
-U_a = 5.0            # accelerating voltage [kV]
-dU_p = 0.1           # uncertainty plate voltage [kV]
+U_acc = 5000         # accelerating voltage [V]
+dU_plate = 100       # uncertainty plate voltage [V]
 dy = 0.05            # readout uncertainty y [cm]
 x = np.arange(3, 11) # positions where y is read [cm]
 
-# Measurements: plate voltage [kV] and deflection y [cm] at x = 3..10 cm
+# Measurements: plate voltage [V] and deflection y [cm] at x = 3..10 cm
 data = {
-    "Measurement 2": (1.9, [-0.01, 0.06, 0.15, 0.25, 0.42, 0.59, 0.78, 0.92]),
-    "Measurement 3": (3.0, [0.02, 0.12, 0.27, 0.46, 0.70, 0.89, 1.19, 1.45]),
-    "Measurement 4": (4.6, [0.07, 0.22, 0.45, 0.75, 1.11, 1.54, 2.02, 2.39]),
-    "Measurement 5": (3.1, [0.02, 0.13, 0.28, 0.48, 0.72, 0.99, 1.31, 1.55]),
+    "Measurement 2": (1900, [-0.01, 0.06, 0.15, 0.25, 0.42, 0.59, 0.78, 0.92]),
+    "Measurement 3": (3000, [0.02, 0.12, 0.27, 0.46, 0.70, 0.89, 1.19, 1.45]),
+    "Measurement 4": (4600, [0.07, 0.22, 0.45, 0.75, 1.11, 1.54, 2.02, 2.39]),
+    "Measurement 5": (3100, [0.02, 0.13, 0.28, 0.48, 0.72, 0.99, 1.31, 1.55]),
 }
 
-colors = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100"]
-markers = ["o", "s", "^", "D"]
+colors = ["#1f1f1e", "#2a78d6", "#1baf7a", "#eda100"]   # black, blue, green, yellow
+markers = ["s", "o", "^", "D"]
+FIT = "red"          # fit line colour
+FIT_LW = 0.5         # fit line width (thin)
+
+
+def style(ax):
+    """Closed box, ticks inside, no grid."""
+    for sp in ax.spines.values():
+        sp.set_visible(True)
+        sp.set_linewidth(1.0)
+    ax.tick_params(direction="in", length=4, top=False, right=False)
+    ax.grid(False)
+
+
+def fit_table(ax, rows, bbox, col=(0.28, 0.72)):
+    """Small table with fit results inside the plot. bbox = [x, y, width, height] in axes units."""
+    tb = ax.table(cellText=rows, cellLoc="left", bbox=bbox, colWidths=list(col))
+    tb.auto_set_font_size(False)
+    tb.set_fontsize(8.5)
+    for (r, c), cell in tb.get_celld().items():
+        cell.set_edgecolor("#8a8a85")
+        cell.set_linewidth(0.6)
+        cell.set_facecolor("white")
+        if c == 0:
+            cell.set_text_props(fontweight="bold")
+    return tb
+
 
 # Put all points in one list
 U = np.concatenate([[U_p] * len(x) for U_p, y in data.values()])
 xx = np.tile(x, len(data))
 yy = np.concatenate([y for U_p, y in data.values()])
 
-# Fit with free start point x0:  y = U_p (x - x0)^2 / (4 d U_a)
+# Fit with free start point x0:  y = U_plate (x - x0)^2 / (4 d U_acc)
 def model(Z, d, x0):
     U, xx = Z
-    return U * (xx - x0)**2 / (4 * d * U_a)
+    return U * (xx - x0)**2 / (4 * d * U_acc)
 
-p, c = curve_fit(model, (U, xx), yy, p0=[10, 0])
+p, cov = curve_fit(model, (U, xx), yy, p0=[10, 0])
 d, x0 = p
-dd, dx0 = np.sqrt(np.diag(c))
+dd, dx0 = np.sqrt(np.diag(cov))
 print(f"d = {d:.2f} +/- {dd:.2f} cm,  x0 = {x0:.2f} +/- {dx0:.2f} cm")
 
-fig, ax = plt.subplots(figsize=(6.4, 4.4), dpi=200)
-
-for (name, (U_p, y)), col, m in zip(data.items(), colors, markers):
-    y = np.array(y)
-    X = U_p * (x - x0)**2 / (4 * U_a)        # X = U_p (x - x0)^2 / (4 U_a)  [cm^2]
-    dX = dU_p * (x - x0)**2 / (4 * U_a)
-    ax.errorbar(X, y, xerr=dX, yerr=dy, fmt=m, ms=5.5, color=col, mec="white",
-                mew=0.8, elinewidth=0.9, capsize=2,
-                label=f"{name}, $U_{{plate}}$ = {U_p} kV", zorder=3)
-
+fig, ax = plt.subplots(figsize=(6.4, 4.6), dpi=200)
+for (name, (U_p, y)), c, m in zip(data.items(), colors, markers):
+    X = U_p * (x - x0)**2 / (4 * U_acc)
+    dX = dU_plate * (x - x0)**2 / (4 * U_acc)
+    ax.errorbar(X, y, xerr=dX, yerr=dy, fmt=m, ms=5, color=c, ecolor=c,
+                elinewidth=0.8, capsize=2, zorder=3, label=f"{name}, $U_{{plate}}$ = {U_p} V")
 t = np.linspace(0, 20, 50)
-ax.plot(t, t / d, color="#1f1f1e", lw=1.5, zorder=2,
-        label=f"fit $y = X/d$,  $d$ = {d:.1f} cm,  $x_0$ = {x0:.1f} cm")
+ax.plot(t, t / d, color=FIT, lw=FIT_LW, zorder=2)
 
-ax.set_xlabel(r"$X = U_{plate}\,(x-x_0)^2/(4U_{acc})$  [cm$^2$]")
-ax.set_ylabel(r"deflection $y$  [cm]")
+ax.set_xlabel(r"$X = U_{plate}\,(x-x_0)^2/(4U_{acc})$ (cm$^2$)")
+ax.set_ylabel(r"$y$ (cm)")
 ax.set_xlim(0, 18.5)
 ax.set_ylim(-0.15, 2.6)
-ax.grid(True, color="#e6e5e0", lw=0.7)
-ax.set_axisbelow(True)
-ax.spines["top"].set_visible(False)
-ax.spines["right"].set_visible(False)
-ax.tick_params(direction="in", length=4)
-ax.legend(frameon=False, fontsize=9.5, loc="upper left")
+style(ax)
+ax.legend(frameon=False, fontsize=9, loc="upper left")
+fit_table(ax, [["Model", r"$y = X/d$, free $x_0$"],
+               [r"$x_0$", f"({x0:.2f} ± {dx0:.2f}) cm"],
+               ["d", f"({d:.2f} ± {dd:.2f}) cm"]],
+          bbox=[0.52, 0.05, 0.46, 0.20])
 
 fig.tight_layout()
 fig.savefig("A7_fit_x0.png")
