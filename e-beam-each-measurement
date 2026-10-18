@@ -16,6 +16,8 @@ data = {
     "Measurement 5": (3100, [0.02, 0.13, 0.28, 0.48, 0.72, 0.99, 1.31, 1.55]),
 }
 
+colors = ["#1f1f1e", "#2a78d6", "#1baf7a", "#eda100"]   # black, blue, green, yellow
+markers = ["s", "o", "^", "D"]
 FIT = "red"          # fit line colour
 FIT_LW = 0.5         # fit line width (thin)
 
@@ -38,15 +40,13 @@ def fit_table(ax, rows, bbox, col=(0.28, 0.72)):
         cell.set_edgecolor("#8a8a85")
         cell.set_linewidth(0.6)
         cell.set_facecolor("white")
-        if c == 0:
-            cell.set_text_props(fontweight="bold")
     return tb
 
 
 fig, axes = plt.subplots(2, 2, figsize=(8, 6.6), dpi=200, sharex=True, sharey=True)
 t = np.linspace(0, 25, 50)
 
-for ax, (name, (U_p, y)) in zip(axes.flat, data.items()):
+for ax, (name, (U_p, y)), c, m in zip(axes.flat, data.items(), colors, markers):
     y = np.array(y)
     X = U_p * x**2 / (4 * U_acc)
     dX = dU_plate * x**2 / (4 * U_acc)
@@ -60,7 +60,7 @@ for ax, (name, (U_p, y)) in zip(axes.flat, data.items()):
     dd = d * np.sqrt((ds / s)**2 + (dU_acc / U_acc)**2 + (dU_plate / U_p)**2)
     print(f"{name}: d = {d:.2f} +/- {dd:.2f} cm")
 
-    ax.errorbar(X, y, xerr=dX, yerr=dy, fmt="s", ms=4.5, color="#1f1f1e", ecolor="#1f1f1e",
+    ax.errorbar(X, y, xerr=dX, yerr=dy, fmt=m, ms=4.5, color=c, ecolor=c,
                 elinewidth=0.8, capsize=2, zorder=3)
     ax.plot(t, s * t, color=FIT, lw=FIT_LW, zorder=2)
     ax.set_title(f"{name}, $U_{{plate}}$ = {U_p} V", fontsize=10)
