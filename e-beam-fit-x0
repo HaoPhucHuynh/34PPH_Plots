@@ -40,8 +40,6 @@ def fit_table(ax, rows, bbox, col=(0.28, 0.72)):
         cell.set_edgecolor("#8a8a85")
         cell.set_linewidth(0.6)
         cell.set_facecolor("white")
-        if c == 0:
-            cell.set_text_props(fontweight="bold")
     return tb
 
 
